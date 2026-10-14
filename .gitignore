@@ -1,0 +1,12 @@
+build/
+hardware/*.dsn
+hardware/*.ses
+hardware/*.rpt
+hardware/*.net
+hardware/preview.svg
+hardware/*-backups/
+hardware/fp-info-cache
+hardware/*.kicad_prl
+hardware/~*.lck
+hardware/#auto_saved_files#
+__pycache__/

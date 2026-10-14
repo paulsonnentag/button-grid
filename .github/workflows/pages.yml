@@ -1,0 +1,66 @@
+name: Check PCB & publish site
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: kicad/kicad:9.0
+      options: --user root
+    env:
+      HOME: /root
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Design checks (ERC, connectivity, DRC)
+        id: checks
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          hardware/scripts/check.sh || echo "failed=1" >> "$GITHUB_OUTPUT"
+
+      - name: Export JLCPCB files and docs
+        run: hardware/scripts/export.sh
+
+      - name: Build site
+        run: python3 site/build_site.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jlcpcb-files
+          path: build/jlcpcb
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/site
+
+      - name: Fail if a check failed
+        if: steps.checks.outputs.failed == '1'
+        run: |
+          cat build/reports/summary.json
+          exit 1
+
+  deploy:
+    # publish even when a check fails, so the failing report is visible on the site
+    needs: build
+    if: ${{ !cancelled() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
