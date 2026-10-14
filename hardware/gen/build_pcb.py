@@ -131,6 +131,44 @@ def read_netlist(path):
     return comps, names, pad_net
 
 
+def _track(board, a, b, layer, net, width):
+    t = pcbnew.PCB_TRACK(board)
+    t.SetStart(a)
+    t.SetEnd(b)
+    t.SetLayer(layer)
+    t.SetNet(net)
+    t.SetWidth(pcbnew.FromMM(width))
+    t.SetLocked(True)
+    board.Add(t)
+
+
+def preroute_usb_vbus(board):
+    """Join the two VBUS pad pairs of the USB-C receptacle (A4/B9 and A9/B4).
+
+    They sit between the data pins, so the autorouter tends to leave one pair
+    unconnected. A locked bridge on B.Cu just behind the pad row solves it;
+    Freerouting routes everything else around it.
+    """
+    j2 = board.FindFootprintByReference("J2")
+    vbus = [p for p in j2.Pads() if p.GetNetname() == "VBUS"]
+    spots = sorted({(p.GetPosition().x, p.GetPosition().y) for p in vbus}, key=lambda s: s[1])
+    a, b = spots[0], spots[-1]
+    net = vbus[0].GetNet()
+    dx = -pcbnew.FromMM(1.75)  # behind the pad row (towards the board interior)
+    vias = []
+    for x, y in (a, b):
+        v = pcbnew.PCB_VIA(board)
+        v.SetPosition(pcbnew.VECTOR2I(x + dx, y))
+        v.SetWidth(pcbnew.FromMM(0.6))
+        v.SetDrill(pcbnew.FromMM(0.3))
+        v.SetNet(net)
+        v.SetLocked(True)
+        board.Add(v)
+        vias.append(v.GetPosition())
+        _track(board, pcbnew.VECTOR2I(x, y), v.GetPosition(), pcbnew.F_Cu, net, 0.4)
+    _track(board, vias[0], vias[1], pcbnew.B_Cu, net, 0.4)
+
+
 def add_outline(board):
     pts = [(0, 0), (W, 0), (W, H), (0, H)]
     for a, b in zip(pts, pts[1:] + pts[:1]):
@@ -209,6 +247,7 @@ def main(net_path, out_path):
         if side == "B":
             fp.Flip(fp.GetPosition(), False)
 
+    preroute_usb_vbus(board)
     add_outline(board)
     add_text(board, "button-grid  8x8  ESP32-S3", W / 2 - 22, H / 2 + 2, 2.0)
     for k in range(1, N_BANKS + 1):
