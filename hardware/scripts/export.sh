@@ -40,7 +40,7 @@ $K kicad-cli pcb export svg --mode-single --fit-page-to-board --exclude-drawing-
 # 3D renders need an OpenGL context; skip quietly where none is available
 for side in top bottom; do
   $K kicad-cli pcb render --side $side --quality high --width 1800 --height 1000 \
-      --background opaque -o "$D/render-$side.png" "$PCB" >/dev/null 2>&1 || \
+      --background opaque --zoom 1.7 -o "$D/render-$side.png" "$PCB" >/dev/null 2>&1 || \
       echo "note: 3D render ($side) not available here"
 done
 # full KiCad project for download

@@ -11,5 +11,6 @@ JAR="${FREEROUTING_JAR:?set FREEROUTING_JAR to the freerouting executable jar}"
 PASSES="${PASSES:-60}"
 $K python3 hardware/gen/dsn_export.py hardware/button-grid.kicad_pcb hardware/button-grid.dsn
 "$JAVA" -jar "$JAR" -de hardware/button-grid.dsn -do hardware/button-grid.ses -mp "$PASSES" \
-  --gui.enabled=false --usage_and_diagnostic_data.disable_analytics=true
+  --gui.enabled=false --usage_and_diagnostic_data.disable_analytics=true \
+  --router.optimizer.enabled=false
 $K python3 hardware/gen/finish_pcb.py hardware/button-grid.kicad_pcb hardware/button-grid.ses
