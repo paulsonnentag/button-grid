@@ -114,7 +114,8 @@ class Sheet:
         sym = self._use(lib_id)
         su = uid()
         node = ["symbol", ["lib_id", Q(lib_id)], ["at", r(x), r(y), rot], ["unit", 1],
-                ["exclude_from_sim", "no"], ["in_bom", "no" if is_power else "yes"],
+                ["exclude_from_sim", "no"],
+                ["in_bom", "no" if is_power or lib_id.startswith("Mechanical:") else "yes"],
                 ["on_board", "no" if is_power else "yes"], ["dnp", "yes" if dnp else "no"],
                 ["fields_autoplaced", "yes"], ["uuid", Q(su)]]
         props = {}

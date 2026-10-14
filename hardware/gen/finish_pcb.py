@@ -107,10 +107,20 @@ def main(pcb, ses):
         key = (t.GetClass(), t.GetStart().x, t.GetStart().y, t.GetEnd().x, t.GetEnd().y)
         if key in locked and not t.IsLocked():
             board.Remove(t)
+    # the router necks tracks down at some pads; keep everything >= 0.2mm (JLCPCB min 0.127)
+    for t in board.GetTracks():
+        if t.GetClass() == "PCB_TRACK" and t.GetWidth() < pcbnew.FromMM(0.2):
+            t.SetWidth(pcbnew.FromMM(0.2))
     for z in list(board.Zones()):
         if z.GetZoneName().startswith("GND_"):
             board.Remove(z)
     gnd = board.FindNet("GND")
+    # through-hole GND pins (buttons, header) can end up in small pour pockets
+    # between tracks where thermal spokes don't reach; connect them solidly instead
+    for fp in board.GetFootprints():
+        for pad in fp.Pads():
+            if pad.GetNetCode() == gnd.GetNetCode() and pad.HasHole():
+                pad.SetLocalZoneConnection(pcbnew.ZONE_CONNECTION_FULL)
     print(f"added {add_stitching_vias(board, gnd)} GND stitching vias")
     for layer in (pcbnew.F_Cu, pcbnew.B_Cu):
         add_gnd_zone(board, layer, gnd)
